@@ -22,6 +22,7 @@ Contributors:
 #include <mosquitto_broker.h>
 #include <memory_mosq.h>
 #include "util_mosq.h"
+#include "security.h"
 
 static int _aclfile_parse(struct mosquitto_db *db);
 static int _unpwd_file_parse(struct mosquitto_db *db);

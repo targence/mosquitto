@@ -22,9 +22,8 @@ Contributors:
 #include <mosquitto_broker.h>
 #include <memory_mosq.h>
 #include "util_mosq.h"
+#include "security.h"
 
-static int _aclfile_parse(struct mosquitto_db *db);
-static int _unpwd_file_parse(struct mosquitto_db *db);
 static int _acl_cleanup(struct mosquitto_db *db, bool reload);
 static int _unpwd_cleanup(struct _mosquitto_unpwd **unpwd, bool reload);
 static int _psk_file_parse(struct mosquitto_db *db);
@@ -335,7 +334,7 @@ int mosquitto_acl_check_default(struct mosquitto_db *db, struct mosquitto *conte
 	return MOSQ_ERR_ACL_DENIED;
 }
 
-static int _aclfile_parse(struct mosquitto_db *db)
+int _aclfile_parse(struct mosquitto_db *db)
 {
 	FILE *aclfile;
 	char buf[1024];
@@ -561,7 +560,7 @@ static int _pwfile_parse(const char *file, struct _mosquitto_unpwd **root)
 	return MOSQ_ERR_SUCCESS;
 }
 
-static int _unpwd_file_parse(struct mosquitto_db *db)
+int _unpwd_file_parse(struct mosquitto_db *db)
 {
 	int rc;
 #ifdef WITH_TLS

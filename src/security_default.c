@@ -15,7 +15,7 @@ Contributors:
 */
 
 #include <config.h>
-
+#include "security.h"
 #include <stdio.h>
 #include <string.h>
 

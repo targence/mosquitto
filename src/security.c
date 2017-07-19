@@ -23,6 +23,7 @@ Contributors:
 #include "mosquitto_plugin.h"
 #include <memory_mosq.h>
 #include "lib_load.h"
+#include "security.h"
 
 typedef int (*FUNC_auth_plugin_version)(void);
 typedef int (*FUNC_auth_plugin_init)(void **, struct mosquitto_auth_opt *, int);
@@ -52,6 +53,25 @@ int mosquitto_security_module_init(struct mosquitto_db *db)
 	int (*plugin_version)(void) = NULL;
 	int version;
 	int rc;
+
+	/* Load username/password data if required. */
+	if(db->config->password_file){
+		rc = _unpwd_file_parse(db);
+		if(rc){
+			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error opening password file \"%s\".", db->config->password_file);
+			return rc;
+		}
+	}
+
+	/* Load acl data if required. */
+	if(db->config->acl_file){
+		rc = _aclfile_parse(db);
+		if(rc){
+			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error opening acl file \"%s\".", db->config->acl_file);
+			return rc;
+		}
+	}
+
 	if(db->config->auth_plugin){
 		lib = LIB_LOAD(db->config->auth_plugin);
 		if(!lib){
@@ -250,7 +270,13 @@ int mosquitto_acl_check(struct mosquitto_db *db, struct mosquitto *context, cons
 				return MOSQ_ERR_ACL_DENIED;
 			}
 		}
-		return db->auth_plugin.acl_check(db->auth_plugin.user_data, context->id, username, topic, access);
+
+		// We have to perform ACL verification through local acl_file
+		// Uncomment to perform additional verification through auth_plugin
+		// if (mosquitto_acl_check_default(db, context, topic, access) == MOSQ_ERR_ACL_DENIED)
+		// 	return db->auth_plugin.acl_check(db->auth_plugin.user_data, context->id, username, topic, access))
+		// else
+			return mosquitto_acl_check_default(db, context, topic, access);
 	}
 }
 
@@ -259,7 +285,11 @@ int mosquitto_unpwd_check(struct mosquitto_db *db, const char *username, const c
 	if(!db->auth_plugin.lib){
 		return mosquitto_unpwd_check_default(db, username, password);
 	}else{
-		return db->auth_plugin.unpwd_check(db->auth_plugin.user_data, username, password);
+		// We have to perform additional password verification through local for system accounts
+		if (mosquitto_unpwd_check_default(db, username, password) == MOSQ_ERR_SUCCESS)
+			return MOSQ_ERR_SUCCESS;
+		else
+			return db->auth_plugin.unpwd_check(db->auth_plugin.user_data, username, password);
 	}
 }
 
